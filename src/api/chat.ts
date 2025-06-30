@@ -71,3 +71,24 @@ export async function markRead(conversationId: string): Promise<void> {
   await client.post(`/chat/${conversationId}/read`);
 }
 
+export async function uploadImage(to_user: string, imageFile: File): Promise<Message> {
+  const formData = new FormData();
+  formData.append('to_user', to_user);
+  formData.append('image', imageFile); // 'image' key must match backend multer config
+
+  const response = await fetch('/api/v1/chat/upload/image', {
+    method: 'POST',
+    headers: {
+      // Don't set Content-Type, the browser does it for FormData
+      'Authorization': `Bearer ${localStorage.getItem('token')}` // Or however you get your token
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error || 'Failed to upload image');
+  }
+
+  return response.json();
+}

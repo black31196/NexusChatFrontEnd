@@ -39,6 +39,7 @@ interface ChatContextValue {
   messages: Message[];
   selectConversation: (id: string) => void;
   sendMessage: (content: string) => void;
+  sendImage: (imageFile: File) => void;
 }
 
 export const ChatContext = createContext<ChatContextValue | undefined>(undefined);
@@ -49,6 +50,27 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [currentConversationId, setCurrentConversationId] = useState<string>();
   const [messages, setMessages]             = useState<Message[]>([]);
   const socketRef = useRef<Socket>();
+
+  const sendImage = async (imageFile: File) => {
+    if (!user || !currentConversationId) {
+      console.warn('Cannot send image (missing user/convo)');
+      return;
+    }
+
+    // You can implement optimistic UI here if you want, showing a placeholder
+    // while the image uploads. For simplicity, we'll just call the API.
+    
+    try {
+      await uploadImageAPI(currentConversationId, imageFile);
+      // After success, you might want to refetch the conversation history
+      // or rely on a websocket event to show the new image message.
+      // For now, we'll just log success.
+      console.log('Image uploaded and sent successfully!');
+    } catch (err) {
+      console.error('[ChatContext] sendImage failed', err);
+      // Handle the error in the UI
+    }
+  };
 
   // keep a ref to the latest convoId for the socket handler
   const currentConvRef = useRef<string>();
@@ -206,7 +228,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         currentConversationId,
         messages,
         selectConversation,
-        sendMessage
+        sendMessage,
+        sendImage
       }}
     >
       {children}
