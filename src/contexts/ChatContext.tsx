@@ -145,54 +145,59 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // 4) sendMessage: optimistic + HTTP + socket
   const sendMessage = async (content: string) => {
-    console.log('[ChatContext] sendMessage →', content);
-    if (!socketRef.current || !user || !currentConversationId) {
-      console.warn('[ChatContext] cannot send (missing socket/user/convo)');
-      return;
-    }
+  console.log('[ChatContext] sendMessage →', content);
+  if (!user || !currentConversationId) {
+    console.warn('[ChatContext] cannot send (missing user/convo)');
+    return;
+  }
 
-    const tempId = Date.now().toString();
-    const optimistic: Message = {
-      id: tempId,
-      conversationId: currentConversationId,
-      from_user: user.id,
-      to_user: currentConversationId,
-      content,
-      timestamp: new Date().toISOString(),
-      status: 'sending'
-    };
-    setMessages(prev => [...prev, optimistic]);
-
-    // HTTP persist
-    try {
-      const saved = await sendMessageAPI(currentConversationId, content);
-      setMessages(prev =>
-        prev.map(m =>
-          m.id === tempId
-            ? { ...m, id: saved.id, timestamp: saved.timestamp, status: 'sent' }
-            : m
-        )
-      );
-    } catch (err) {
-      console.error('[ChatContext] sendMessageAPI failed', err);
-    }
-
-    // socket emit
-    socketRef.current.emit(
-      'send_message',
-      optimistic,
-      (ack: { id: string; timestamp: string }) => {
-        console.log('[Socket.IO] send_message ack →', ack);
-        setMessages(prev =>
-          prev.map(m =>
-            m.id === tempId
-              ? { ...m, id: ack.id, timestamp: ack.timestamp, status: 'delivered' }
-              : m
-          )
-        );
-      }
-    );
+  // Create a temporary ID for optimistic UI update
+  const tempId = Date.now().toString();
+  const optimisticMessage: Message = {
+    id: tempId,
+    conversationId: currentConversationId,
+    from_user: user.id,
+    to_user: currentConversationId,
+    content,
+    timestamp: new Date().toISOString(),
+    status: 'sending'
   };
+
+  // 1. Optimistically update the UI so the user sees their message immediately.
+  setMessages(prev => [...prev, optimisticMessage]);
+
+  // 2. Send the message to the server via HTTP to be saved.
+  try {
+    const savedMessage = await sendMessageAPI(currentConversationId, content);
+
+    // 3. (Optional but recommended) When the API call succeeds, update the optimistic message
+    // with the real ID and timestamp from the server.
+    // The 'receive_message' listener will also receive this, so we need to
+    // prevent duplicates on the UI.
+    setMessages(prev => {
+      // First, check if the real message already arrived via WebSocket
+      if (prev.some(m => m.id === savedMessage._id)) {
+        // If it did, just remove the 'sending' message
+        return prev.filter(m => m.id !== tempId);
+      }
+      // Otherwise, replace the 'sending' message with the saved one
+      return prev.map(m =>
+        m.id === tempId ? { ...savedMessage, id: savedMessage._id, status: 'sent' } : m
+      );
+    });
+
+  } catch (err) {
+    console.error('[ChatContext] sendMessageAPI failed', err);
+    // If the API fails, you could update the message status to 'failed'
+    setMessages(prev =>
+      prev.map(m => (m.id === tempId ? { ...m, status: 'failed' } : m))
+    );
+  }
+
+  // 4. That's it! DO NOT emit a 'send_message' event here.
+  // The server will broadcast the 'receive_message' event after it saves the message,
+  // and your existing useEffect hook will handle it for all clients.
+};
 
   return (
     <ChatContext.Provider
