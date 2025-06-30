@@ -19,8 +19,8 @@ import {
 export interface Message {
   id: string;
   conversationId: string;
-  from: string;
-  to: string;
+  from_user: string;
+  to_user: string;
   content: string;
   timestamp: string;
   status: 'sending' | 'sent' | 'delivered';
@@ -155,8 +155,8 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const optimistic: Message = {
       id: tempId,
       conversationId: currentConversationId,
-      from: user.id,
-      to: currentConversationId,
+      from_user: user.id,
+      to_user: currentConversationId,
       content,
       timestamp: new Date().toISOString(),
       status: 'sending'

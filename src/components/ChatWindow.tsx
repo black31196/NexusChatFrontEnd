@@ -7,8 +7,8 @@ import MessageInput from './MessageInput';
 interface Message {
   id: string;
   conversationId: string;
-  from: string;
-  to: string;
+  from_user: string;
+  to_user: string;
   content: string;
   timestamp: string;
   status: 'sending' | 'sent' | 'delivered';
@@ -31,7 +31,7 @@ export default function ChatWindow({ messages, onSend }: Props) {
       <div className="flex-1 overflow-y-auto p-4">
         {messages.map((m) => (
           <div key={m.id} className="mb-2">
-            <strong>{m.from}:</strong> {m.content}
+            <strong>{m.from_user}:</strong> {m.content}
             <div className="text-xs text-gray-500">
               {new Date(m.timestamp).toLocaleTimeString()}
             </div>
