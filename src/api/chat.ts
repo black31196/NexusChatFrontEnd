@@ -24,12 +24,12 @@ export async function fetchConversations(): Promise<
  * GET /api/v1/chat/history?to=<userId>&limit=<n>
  */
 export async function fetchHistory(
-  to: string,
+  to_user: string,
   limit = 50
 ): Promise<any[]> {
   const resp = await client.get<{ history: any[] }>(
     '/chat/history',
-    { params: { to, limit } }
+    { params: { to_user, limit } }
   )
   return resp.data.history
 }
@@ -37,8 +37,8 @@ export async function fetchHistory(
 export interface MessagePayload {
   id: string
   conversationId: string
-  from: string
-  to: string
+  from_user: string
+  to_user: string
   content: string
   timestamp: string
 }
@@ -57,11 +57,11 @@ export async function fetchMessages(conversationId: string): Promise<MessagePayl
  * POST /api/v1/chat/send
  */
 export async function sendMessage(
-  to: string,
+  to_user: string,
   content: string
 ): Promise<MessagePayload> {
   const resp = await client.post<MessagePayload>('/chat/send', {
-    to,
+    to_user,
     content,
   })
   return resp.data
